@@ -1,2 +1,1 @@
-py keybpm.py %1
-pause
+py "D:\Program Files\ffmpeg\keybpm.py" %1

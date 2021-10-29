@@ -1,13 +1,21 @@
-import sys, json, re
+import sys, json, re, os
 from urllib.request import urlopen, Request
 from urllib.parse import urlparse, quote_plus, unquote
 
+fullpath = sys.argv[1]
+#fullpathnofile = 
 #print (sys.argv[1])
+file = fullpath.split('\\')
+file = file[len(file)-1]
+extension = file.split('.')
+extension = extension[len(extension)-1]
+print("----------------------------------")
+print(file)
 print("----------------------------------")
 #------------- Configuration ------------------
 Remixes = False # include remixes? False = no
 Keys = {"C Major": "C", "C# Major": "C#", "D Major": "D"}
-Filename = "$artist - $song ($type) $key $bpm" # structure of the name of the file to be renamed
+Filename = "$artist - $song $type $key $bpm" # structure of the name of the file to be renamed
 MaxBPM = 140 # set the value max o a bpm
 #print(Keys["D Major"])
 
@@ -36,25 +44,42 @@ def OpenURL(url, headers={}, user_data={}):
 #----------------------------------------------
 def keys(value):
 	try:
-		return Keys[keybpm[0][1]]
+		value = Keys[keybpm[0][1]]
 	except:
-		return value
+		value = value
+	return value.replace(" Major","").replace(" Minor","m")
 #----------------------------------------------
 def bpm(value):
 	value = int(value)
 	if value > MaxBPM:
-		return str(value/2)
+		value = str(value/2)
 	else:
-		return str(value)
+		value = str(value)
+	return value.replace(".0","")
 #----------------------------------------------
-file = "stay justin"
-file = re.sub('\(.+', '', file, flags=re.IGNORECASE)
+#file = "Foster the People - Worst Nites (Instrumental)"
+fileq = re.sub('\(.+', '', file, flags=re.IGNORECASE) # variable to serach for the song
+fileq = re.sub('^\d+( |\.|\-)', '', fileq, flags=re.IGNORECASE) # variable to serach for the song
 
-search = OpenURL("https://musicstax.com/search?q={0}".format(quote_plus(file)))
-results = re.compile("track\/([^\/]+)\/([^\"]+)").findall(search)
+instrumental = re.compile("(instrumental|inst)", re.IGNORECASE).findall(file)
+acapella = re.compile("(aca|acca|acapella)", re.IGNORECASE).findall(file)
+if instrumental:
+	steam="(Inst)"
+elif acapella:
+	steam="(Acap)"
+else:
+	steam=""
+#ST(instacap)
+
+search = OpenURL("https://musicstax.com/search?q={0}".format(quote_plus(fileq))).replace("\r","").replace("\n","")
+results = re.compile("track\/([^\/]+)\/([^\"]+).+?song-artist\"\>([^\<]+)").findall(search)
 if results:
 	results = list(dict.fromkeys(results))
-ST(results)
+else:
+	fileq = input('Not found type to search: ')
+	search = OpenURL("https://musicstax.com/search?q={0}".format(quote_plus(fileq))).replace("\r","").replace("\n","")
+	results = re.compile("track\/([^\/]+)\/([^\"]+).+?song-artist\"\>([^\<]+)").findall(search)
+#ST(results)
 
 newresults = []
 for entry in results:
@@ -63,10 +88,10 @@ for entry in results:
 		
 i = 1
 for entry in newresults:
-	print ("{1}) {0}".format(entry[0], str(i)) )
+	print ("{2}) {1} - {0}".format(entry[0], entry[2], str(1) ) )
 	i+=1
 choice = input('Type your choice: ')
-#ST( newresults[int(choice)-1][1])
+#ST( newresults)
 trackid = newresults[int(choice)-1][1]
 track = OpenURL("https://musicstax.com/track/worst-nites/{0}".format(trackid)).replace("\r","").replace("\n","")
 trackname = re.compile("artist\: \"([^\"]+).+?song\: \"([^\"]+)").findall(track)
@@ -77,10 +102,13 @@ if trackname and keybpm:
 	#"$artist - $song ($type) $key $bpm" 
 	Filename = re.sub("\$artist", trackname[0][0], Filename, flags=re.IGNORECASE)
 	Filename = re.sub("\$song", trackname[0][1], Filename, flags=re.IGNORECASE)
-	Filename = re.sub("\$key", bpm(keybpm[0][0]), Filename, flags=re.IGNORECASE)
-	Filename = re.sub("\$bpm", keys(keybpm[0][1]), Filename, flags=re.IGNORECASE)
+	Filename = re.sub("\$key", bpm(keybpm[0][1]), Filename, flags=re.IGNORECASE)
+	Filename = re.sub("\$bpm", keys(keybpm[0][0]), Filename, flags=re.IGNORECASE)
+	Filename = re.sub("\$type", steam, Filename, flags=re.IGNORECASE)
+	Filename = re.sub("  ", " ", Filename, flags=re.IGNORECASE)
 	#Filename
 print (Filename)
+os.rename(fullpath, "{0}.{1}".format(Filename,extension))
 #print (url)
 
 
