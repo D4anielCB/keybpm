@@ -69,33 +69,45 @@ elif acapella:
 	steam="(Acap)"
 else:
 	steam=""
-#ST(instacap)
-#def results():
-search = OpenURL("https://musicstax.com/search?q={0}".format(quote_plus(fileq))).replace("\r","").replace("\n","")
-results = re.compile("track\/([^\/]+)\/([^\"]+).+?song-artist\"\>([^\<]+)").findall(search)
-if results:
-	results = list(dict.fromkeys(results))
-else:
-	fileq = input('Not found type to search: ')
-	search = OpenURL("https://musicstax.com/search?q={0}".format(quote_plus(fileq))).replace("\r","").replace("\n","")
+# ==========================
+def Results(q):
+	search = OpenURL("https://musicstax.com/search?q={0}".format(quote_plus(q))).replace("\r","").replace("\n","")
 	results = re.compile("track\/([^\/]+)\/([^\"]+).+?song-artist\"\>([^\<]+)").findall(search)
+	if results:
+		results = list(dict.fromkeys(results))
+	return results
+# ==========================
+results = Results(fileq)
+if not results:
+	fileq = input('Not found type to search: ')
+	results = Results(fileq)
 #ST(results)
 
 newresults = []
 for entry in results:
 	if not 'remix' in entry[0] or Remixes:
-		newresults.append(entry)
-		
+		newresults.append(entry)		
 i = 1
 for entry in newresults:
 	print ("{2}) {1} - {0}".format(entry[0], entry[2], str(i) ) )
 	i+=1
+	
 choice = input('Type your choice or type the name of the song if not found: ')
 
-if re.compile("\D+").findall(choice):
-	search = OpenURL("https://musicstax.com/search?q={0}".format(quote_plus(choice))).replace("\r","").replace("\n","")
-	results = re.compile("track\/([^\/]+)\/([^\"]+).+?song-artist\"\>([^\<]+)").findall(search)
 
+if re.compile("\D+").findall(choice):
+	print('-----------------------------')
+	results = Results(choice)
+	newresults = []
+	for entry in results:
+		if not 'remix' in entry[0] or Remixes:
+			newresults.append(entry)		
+	i = 1
+	for entry in newresults:
+		print ("{2}) {1} - {0}".format(entry[0], entry[2], str(i) ) )
+		i+=1
+	choice = input('Type your choice: ')
+	
 trackid = newresults[int(choice)-1][1]
 track = OpenURL("https://musicstax.com/track/worst-nites/{0}".format(trackid)).replace("\r","").replace("\n","")
 trackname = re.compile("artist\: \"([^\"]+).+?song\: \"([^\"]+)").findall(track)
