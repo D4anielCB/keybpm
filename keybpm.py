@@ -70,7 +70,7 @@ elif acapella:
 else:
 	steam=""
 #ST(instacap)
-
+#def results():
 search = OpenURL("https://musicstax.com/search?q={0}".format(quote_plus(fileq))).replace("\r","").replace("\n","")
 results = re.compile("track\/([^\/]+)\/([^\"]+).+?song-artist\"\>([^\<]+)").findall(search)
 if results:
@@ -88,26 +88,30 @@ for entry in results:
 		
 i = 1
 for entry in newresults:
-	print ("{2}) {1} - {0}".format(entry[0], entry[2], str(1) ) )
+	print ("{2}) {1} - {0}".format(entry[0], entry[2], str(i) ) )
 	i+=1
-choice = input('Type your choice: ')
-#ST( newresults)
+choice = input('Type your choice or type the name of the song if not found: ')
+
+if re.compile("\D+").findall(choice):
+	search = OpenURL("https://musicstax.com/search?q={0}".format(quote_plus(choice))).replace("\r","").replace("\n","")
+	results = re.compile("track\/([^\/]+)\/([^\"]+).+?song-artist\"\>([^\<]+)").findall(search)
+
 trackid = newresults[int(choice)-1][1]
 track = OpenURL("https://musicstax.com/track/worst-nites/{0}".format(trackid)).replace("\r","").replace("\n","")
 trackname = re.compile("artist\: \"([^\"]+).+?song\: \"([^\"]+)").findall(track)
 keybpm = re.compile("eventAction\: \'BPM\',.+?eventLabel.+?(\d+).+?eventLabel\: \'([^\']+)").findall(track)
-ST(keybpm)
+#ST(keybpm)
 if trackname and keybpm:
 	#filename = "{0} - {1} (Inst) {3}".format(trackname[0][0], trackname[0][1], keybpm[0][0], keys(keybpm[0][1]))
 	#"$artist - $song ($type) $key $bpm" 
 	Filename = re.sub("\$artist", trackname[0][0], Filename, flags=re.IGNORECASE)
 	Filename = re.sub("\$song", trackname[0][1], Filename, flags=re.IGNORECASE)
-	Filename = re.sub("\$key", bpm(keybpm[0][1]), Filename, flags=re.IGNORECASE)
-	Filename = re.sub("\$bpm", keys(keybpm[0][0]), Filename, flags=re.IGNORECASE)
+	Filename = re.sub("\$key", keys(keybpm[0][1]), Filename, flags=re.IGNORECASE)
+	Filename = re.sub("\$bpm", bpm(keybpm[0][0]), Filename, flags=re.IGNORECASE)
 	Filename = re.sub("\$type", steam, Filename, flags=re.IGNORECASE)
 	Filename = re.sub("  ", " ", Filename, flags=re.IGNORECASE)
 	#Filename
-print (Filename)
+print ("{0}.{1}".format(Filename,extension))
 os.rename(fullpath, "{0}.{1}".format(Filename,extension))
 #print (url)
 
