@@ -1,4 +1,4 @@
-import sys, json, re, os
+import sys, json, re, os, requests
 from urllib.request import urlopen, Request
 from urllib.parse import urlparse, quote_plus, unquote
 
@@ -19,6 +19,14 @@ Filename = "$artist - $song $type $key $bpm" # structure of the name of the file
 MaxBPM = 140 # set the value max o a bpm
 #print(Keys["D Major"])
 
+
+
+#----------------------------------------------
+def remove_accents(input_str):
+	import unicodedata
+	nfkd_form = unicodedata.normalize('NFKD', input_str)
+	only_ascii = nfkd_form.encode('ASCII', 'ignore')
+	return only_ascii.decode("utf-8") 
 #----------------------------------------------
 
 def ST(x="", o="w"):
@@ -35,13 +43,22 @@ def ST(x="", o="w"):
 	file.write(y+"\n"+str(type(x)))
 	file.close()
 
-def OpenURL(url, headers={}, user_data={}):
-	req = Request(url)
-	headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100110 Firefox/11.0'
-	for k, v in headers.items():
-		req.add_header(k, v)
-	return urlopen(req).read().decode("utf-8").replace("\r", "")
+def OpenURL(url):
+	r = requests.get(url = url, headers={'User-Agent': 'Mozilla 5.0'})
+	#ST(r.text)
+	return r.text
 #----------------------------------------------
+def Google(key):
+	key=key+"spotify"
+	search =  OpenURL("https://www.google.com/search?q={0}".format(quote_plus(key)))
+	googlere = re.compile("https:\/\/open.spotify.com.+?track\/([^\&]+).+?class.+?\"\>([^\<]+)").findall(search)
+	return googlere
+	#f = OpenURL("results")
+#----------------------------------------------
+#bb = OpenURL("https://www.google.com/search?q=urllib.error.HTTPError%3A+HTTP+Error+403%3A+Forbidden&oq=urllib.error.HTTPError%3A+HTTP+Error+403%3A+Forbidden&aqs=chrome..69i57.604j0j7&sourceid=chrome&ie=UTF-8")
+#ST(bb)
+
+
 def keys(value):
 	try:
 		value = Keys[keybpm[0][1]]
@@ -62,7 +79,7 @@ fileq = re.sub('\(.+', '', file, flags=re.IGNORECASE) # variable to serach for t
 fileq = re.sub('^\d+( |\.|\-)', '', fileq, flags=re.IGNORECASE) # variable to serach for the song
 
 instrumental = re.compile("(instrumental|inst)", re.IGNORECASE).findall(file)
-acapella = re.compile("(aca|acca|acapella)", re.IGNORECASE).findall(file)
+acapella = re.compile("(aca|acca|acc?apell?a|pella)", re.IGNORECASE).findall(file)
 if instrumental:
 	steam="(Inst)"
 elif acapella:
@@ -78,19 +95,46 @@ def Results(q):
 	return results
 # ==========================
 results = Results(fileq)
+resultsG = False
+if results:
+	newresults = []
+	for entry in results:
+		if not 'remix' in entry[0] or Remixes:
+			newresults.append(entry)		
+	i = 1
+	for entry in newresults:
+		print ("{2}) {1} - {0}".format(entry[0], entry[2], str(i) ) )
+		i+=1
+
 if not results:
+	resultsG = Google(fileq)
+	#ST(resultsG)
+
+if resultsG:
+	newresults = []
+	#print("google")
+	#newresults.append(["","","Digitar a busca"])
+	for entry in resultsG:
+		newresults.append( ["",entry[0],entry[1]] )
+		#print(str(["",entry[0],entry[1]]))
+	i = 1
+	for entry in newresults:
+		#print(str(entry))
+		print ("{2}) {1} - {0}".format(entry[0], entry[2], str(i) ) )
+		i+=1
+#ST(resultsG)
+if not resultsG and not results:
 	fileq = input('Not found type to search: ')
 	results = Results(fileq)
-#ST(results)
 
-newresults = []
-for entry in results:
-	if not 'remix' in entry[0] or Remixes:
-		newresults.append(entry)		
-i = 1
-for entry in newresults:
-	print ("{2}) {1} - {0}".format(entry[0], entry[2], str(i) ) )
-	i+=1
+	newresults = []
+	for entry in results:
+		if not 'remix' in entry[0] or Remixes:
+			newresults.append(entry)		
+	i = 1
+	for entry in newresults:
+		print ("{2}) {1} - {0}".format(entry[0], entry[2], str(i) ) )
+		i+=1
 	
 choice = input('Type your choice or type the name of the song if not found: ')
 
@@ -124,7 +168,7 @@ if trackname and keybpm:
 	Filename = re.sub("  ", " ", Filename, flags=re.IGNORECASE)
 	#Filename
 print ("{0}.{1}".format(Filename,extension))
-os.rename(fullpath, "{0}.{1}".format(Filename,extension))
+os.rename(fullpath, "{0}.{1}".format(remove_accents(Filename),extension))
 #print (url)
 
 
