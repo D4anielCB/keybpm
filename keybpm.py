@@ -35,7 +35,7 @@ def changetag(file,artist,song,album,genre,imagetrack):
 		imagetrack = getimgtrack(imagetrack)
 		#ST(imagetrack)
 	#try:
-	ST(file)
+	#ST(file)
 	audiofile = eyed3.load(file)
 	artist = re.sub(' \,.+', '', artist, flags=re.IGNORECASE)
 	audiofile.tag.title = song
@@ -76,6 +76,11 @@ def ST(x="", o="w"):
 			y = str(str(x).encode("utf-8"))
 	file = open("study.txt", o)
 	file.write(y+"\n"+str(type(x)))
+	file.close()
+	
+def html(x="", o="w"):
+	file = open("_keybpm_.html", o)
+	file.write(x)
 	file.close()
 
 def OpenURL(url):
@@ -124,9 +129,25 @@ else:
 # ==========================
 def Results(q):
 	search = OpenURL("https://musicstax.com/search?q={0}".format(quote_plus(q))).replace("\r","").replace("\n","")
+	#ST(search)
 	results = re.compile("track\/([^\/]+)\/([^\"]+).+?song-artist\"\>([^\<]+)").findall(search)
-	if results:
+	results2 = re.compile("track\/([^\/]+)\/([^\"]+).+?\"([^\"]+).+?song-artist\"\>([^\<]+)").findall(search)
+	fim = '<style>'
+	fim+=".imageholder{position: relative; float: left;}"
+	fim+=".caption{ position: absolute; top: 50%; mix-blend-mode: difference;color: rgb(0, 255, 255);font-family: verdana; font-size: 28px}"
+	fim+="</style>"
+	i=1
+	if results2:
 		results = list(dict.fromkeys(results))
+		for entry in results2:
+			if not 'remix' in entry[0] or Remixes:
+				#fim+=" <img src=\""+entry[2]+"\">"+" "+str(i)+" "+entry[0] + " - " +entry[3]+"\n"
+				fim+="<a class=\"imageholder\">"
+				fim+="<div class=\"caption\">{1})<br>{2}<br>{3}</div>\n".format(entry[2],str(i),entry[0],entry[3])
+				fim+="<td><img src=\"{0}\" width=\"300\">\n".format(entry[2],str(i),entry[0],entry[3])
+				fim+="</a>"
+				i+=1
+		html(fim)
 	return results
 # ==========================
 results = Results(fileq)
@@ -174,7 +195,8 @@ if not resultsG and not results:
 choice = input('Type your choice or type the name of the song if not found: ')
 
 
-if re.compile("\D+").findall(choice):
+while re.compile("\D+").findall(choice):
+	os.system('cls||clear')
 	print('-----------------------------')
 	results = Results(choice)
 	newresults = []
@@ -185,7 +207,9 @@ if re.compile("\D+").findall(choice):
 	for entry in newresults:
 		print ("{2}) {1} - {0}".format(entry[0], entry[2], str(i) ) )
 		i+=1
-	choice = input('Type your choice: ')
+	choice = input('Type your choice or type the name of the song if not found: ')
+#os.system('cls||clear')
+
 	
 trackid = newresults[int(choice)-1][1]
 track = OpenURL("https://musicstax.com/track/worst-nites/{0}".format(trackid)).replace("\r","").replace("\n","")
@@ -213,6 +237,10 @@ if trackname and keybpm:
 	print ("{0}.{1}".format(Filename,extension))
 	changetag(fullpath,cartist,csong,cbpm,ckeys,imagetrack)
 	os.rename(fullpath, "{0}.{1}".format(remove_accents(Filename),extension))
+	try:
+		os.remove("_keybpm_.html")
+	except:
+		pass
 #file,artist,song,album
 #print (url)
 
