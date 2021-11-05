@@ -1,14 +1,22 @@
+# -*- coding: utf-8 -*-
 import sys, json, re, os, requests
 from urllib.request import urlopen, Request
 from urllib.parse import urlparse, quote_plus, unquote
 import eyed3
 
+
+
+folderpath = sys.argv[0].split('\\')
+folderpath = folderpath[len(folderpath)-1]
+folderpath = re.sub("."+folderpath, '', sys.argv[0], flags=re.IGNORECASE)
+
 fullpath = sys.argv[1]
 #fullpathnofile = 
 #print (sys.argv[1])
 file = fullpath.split('\\')
-file = file[len(file)-1]
-file = re.sub('_HP2-4BAND-3090_4band_1_', ' (', file, flags=re.IGNORECASE)
+#file = file[len(file)-1]
+fileold = file[len(file)-1]
+file = re.sub('_HP2-4BAND-3090_4band_1_', ' (', fileold, flags=re.IGNORECASE)
 extension = file.split('.')
 extension = extension[len(extension)-1]
 print("----------------------------------")
@@ -30,27 +38,30 @@ def getimgtrack(url):
 	#requests.get(url)
 	r = requests.get(url)
 	return r.content
-def changetag(file,artist,song,album,genre,imagetrack):
+def changetag(file,artist,song,album,genre,imagetrack,year,filename):
 	if imagetrack:
 		imagetrack = getimgtrack(imagetrack)
 		#ST(imagetrack)
 	#try:
 	#ST(file)
-	audiofile = eyed3.load(file)
+	audiofile = eyed3.load(file).tag
 	artist = re.sub(' \,.+', '', artist, flags=re.IGNORECASE)
-	audiofile.tag.title = song
-	audiofile.tag.genre = genre
-	audiofile.tag.artist = artist
-	audiofile.tag.album = album
+	audiofile.title = song
+	audiofile.genre = genre
+	audiofile.artist = artist
+	audiofile.album = album
+	audiofile.recording_date = year
+	if filename != fileold:
+		audiofile.album_artist = fileold
 	if imagetrack:
 		#fileimg = open("as345trfgsdf345345.jfif", 'rb').read()
 		#ST(imagetrack)
-		audiofile.tag.images.set(3, imagetrack, 'image/jpeg')
+		audiofile.images.set(3, imagetrack, 'image/jpeg')
 		#audiofile.tag.images.set(3, imagetrack , "image/jpeg" ,u"a")
 		#audiofile.tag.images.set(type_=3, img_data=None, mime_type=None, description=u"", img_url=u"https://www.suasletras.com/fotos_artista/212af3ade52a5b519986ca5a200cd0b9.jpg")
 	#audiofile.tag.album_artist = "Various Artists"
 	#audiofile.tag.track_num = 3
-	audiofile.tag.save(version=eyed3.id3.ID3_V2_3)
+	audiofile.save(version=eyed3.id3.ID3_V2_3)
 	#audiofile.tag.save()
 	#try:
 	#	os.remove("as345trfgsdf345345.jfif")
@@ -74,19 +85,34 @@ def ST(x="", o="w"):
 			y = str(x)
 		except:
 			y = str(str(x).encode("utf-8"))
-	file = open("study.txt", o)
+	arquivo = os.path.join(folderpath,"study.txt")
+	file = open(arquivo, o)
 	file.write(y+"\n"+str(type(x)))
 	file.close()
 	
+
 def html(x="", o="w"):
-	file = open("_keybpm_.html", o)
+	arquivo = os.path.join(folderpath,"_keybpm_.html")
+	file = open(arquivo, o)
 	file.write(x)
 	file.close()
 
 def OpenURL(url):
-	r = requests.get(url = url, headers={'User-Agent': 'Mozilla 5.0'})
+	#r = requests.get(url = url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100110 Firefox/11.0'})
 	#ST(r.text)
-	return r.text
+	#return r.text
+	req = Request(url)
+	headers = {}
+	headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100110 Firefox/11.0'
+	for k, v in headers.items():
+		req.add_header(k, v)
+	try:
+		final = urlopen(req).read().decode('utf-8')
+		#print(11111)
+	except:
+		final = str(urlopen(req).read()).replace('\r', '')
+	#ST(final)
+	return final
 #----------------------------------------------
 def Google(key):
 	key=key+"spotify"
@@ -214,6 +240,8 @@ while re.compile("\D+").findall(choice):
 trackid = newresults[int(choice)-1][1]
 track = OpenURL("https://musicstax.com/track/worst-nites/{0}".format(trackid)).replace("\r","").replace("\n","")
 trackname = re.compile("artist\: \"([^\"]+).+?song\: \"([^\"]+)").findall(track)
+year = re.compile("eventAction\: \'ReleaseYear\'\,.+?eventlabel\: \'([^\']+)", re.IGNORECASE).findall(track)
+#ST(year)
 image = re.compile("background: url\('([^\']+)").findall(track)
 imagetrack = ""
 if image:
@@ -225,6 +253,9 @@ if trackname and keybpm:
 	cbpm=bpm(keybpm[0][0])
 	cartist = re.sub(' ?\,.+', '', trackname[0][0], flags=re.IGNORECASE)
 	csong = trackname[0][1]
+	cyear= ""
+	if year:
+		cyear=year[0]
 	#filename = "{0} - {1} (Inst) {3}".format(trackname[0][0], trackname[0][1], keybpm[0][0], keys(keybpm[0][1]))
 	#"$artist - $song ($type) $key $bpm" 
 	Filename = re.sub("\$artist", cartist, Filename, flags=re.IGNORECASE)
@@ -235,15 +266,18 @@ if trackname and keybpm:
 	Filename = re.sub("  ", " ", Filename, flags=re.IGNORECASE)
 	#Filename
 	print ("{0}.{1}".format(Filename,extension))
-	changetag(fullpath,cartist,csong,cbpm,ckeys,imagetrack)
-	os.rename(fullpath, "{0}.{1}".format(remove_accents(Filename),extension))
+	newname = "{0}.{1}".format(remove_accents(Filename),extension)
+	#try:
+	changetag(fullpath,cartist,csong,cbpm,ckeys,imagetrack,cyear,newname)
+	#except:
+		#pass
+	os.rename(fullpath, newname)
 	try:
 		os.remove("_keybpm_.html")
 	except:
 		pass
 #file,artist,song,album
 #print (url)
-
 
 
 
