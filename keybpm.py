@@ -156,8 +156,9 @@ else:
 def Results(q):
 	search = OpenURL("https://musicstax.com/search?q={0}".format(quote_plus(q))).replace("\r","").replace("\n","")
 	#ST(search)
-	results = re.compile("track\/([^\/]+)\/([^\"]+).+?song-artist\"\>([^\<]+)").findall(search)
-	results2 = re.compile("track\/([^\/]+)\/([^\"]+).+?\"([^\"]+).+?song-artist\"\>([^\<]+)").findall(search)
+	results = re.compile("\/track\/([^\/]+)\/([^\"]+).+?song-artist\"\>([^\<]+)").findall(search)
+	results2 = re.compile("\/track\/([^\/]+)\/([^\"]+).+?\"([^\"]+).+?song-artist\"\>([^\<]+)").findall(search)
+	ST(search)
 	fim = '<style>'
 	fim+=".imageholder{position: relative; float: left;}"
 	fim+=".caption{ position: absolute; top: 50%; mix-blend-mode: difference;color: rgb(0, 255, 255);font-family: verdana; font-size: 28px}"
@@ -177,6 +178,7 @@ def Results(q):
 	return results
 # ==========================
 results = Results(fileq)
+#results = False
 resultsG = False
 if results:
 	newresults = []
@@ -193,17 +195,23 @@ if not results:
 	#ST(resultsG)
 
 if resultsG:
-	newresults = []
-	#print("google")
-	#newresults.append(["","","Digitar a busca"])
-	for entry in resultsG:
-		newresults.append( ["",entry[0],entry[1]] )
-		#print(str(["",entry[0],entry[1]]))
-	i = 1
-	for entry in newresults:
-		#print(str(entry))
-		print ("{2}) {1} - {0}".format(entry[0], entry[2], str(i) ) )
-		i+=1
+	print("GOOGLE")
+	#newsearch = re.sub(' ?\- ?.+', '', resultsG[0][1], flags=re.IGNORECASE)
+	newsearch = re.sub(' song by', '', resultsG[0][1], flags=re.IGNORECASE)
+	newsearch = re.sub(' ?\| Spotify', '', newsearch, flags=re.IGNORECASE)
+	newsearch = re.sub(', .+', '', newsearch, flags=re.IGNORECASE)
+	#print(newsearch)
+	results = Results(newsearch)
+	if results:
+		newresults = []
+		for entry in results:
+			if not 'remix' in entry[0] or Remixes:
+				newresults.append(entry)		
+		i = 1
+		for entry in newresults:
+			print ("{2}) {1} - {0}".format(entry[0], entry[2], str(i) ) )
+			i+=1
+
 #ST(resultsG)
 if not resultsG and not results:
 	fileq = input('Not found type to search: ')
