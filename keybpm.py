@@ -17,6 +17,8 @@ file = fullpath.split('\\')
 #file = file[len(file)-1]
 fileold = file[len(file)-1]
 file = re.sub('_HP2-4BAND-3090_4band_1_', ' (', fileold, flags=re.IGNORECASE)
+file = re.sub('_', ' ', fileold, flags=re.IGNORECASE)
+#print(file)
 extension = file.split('.')
 extension = extension[len(extension)-1]
 print("----------------------------------")
@@ -38,7 +40,7 @@ def getimgtrack(url):
 	#requests.get(url)
 	r = requests.get(url)
 	return r.content
-def changetag(file,artist,song,album,genre,imagetrack,year,filename):
+def changetag(file,artist,song,album,genre,imagetrack,year,filename,tracknum):
 	if imagetrack:
 		imagetrack = getimgtrack(imagetrack)
 		#ST(imagetrack)
@@ -46,6 +48,8 @@ def changetag(file,artist,song,album,genre,imagetrack,year,filename):
 	#ST(file)
 	audiofile = eyed3.load(file).tag
 	artist = re.sub(' \,.+', '', artist, flags=re.IGNORECASE)
+	if tracknum:
+		audiofile.track_num = int(tracknum)
 	audiofile.title = song
 	audiofile.genre = genre
 	audiofile.artist = artist
@@ -92,16 +96,19 @@ def ST(x="", o="w"):
 	
 
 def html(x="", o="w"):
-	arquivo = os.path.join(folderpath,"_keybpm_.html")
-	file = open(arquivo, o)
-	file.write(x)
-	file.close()
+	try:
+		arquivo = os.path.join(folderpath,"_keybpm_.html")
+		file = open(arquivo, o)
+		file.write(x)
+		file.close()
+	except:
+		pass
 
 def OpenURL(url):
-	#r = requests.get(url = url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100110 Firefox/11.0'})
+	r = requests.get(url = url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100110 Firefox/11.0'})
 	#ST(r.text)
-	#return r.text
-	req = Request(url)
+	return r.text
+	'''req = Request(url)
 	headers = {}
 	headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100110 Firefox/11.0'
 	for k, v in headers.items():
@@ -112,12 +119,14 @@ def OpenURL(url):
 	except:
 		final = str(urlopen(req).read()).replace('\r', '')
 	#ST(final)
-	return final
+	return final'''
 #----------------------------------------------
 def Google(key):
-	key=key+"spotify"
+	key=key.replace(".mp3","")+" spotify"
+	#print(quote_plus(key))
 	search =  OpenURL("https://www.google.com/search?q={0}".format(quote_plus(key)))
-	googlere = re.compile("https:\/\/open.spotify.com.+?track\/([^\&]+).+?class.+?\"\>([^\<]+)").findall(search)
+	googlere = re.compile("https:\/\/open.spotify.com.+?\/([^\&]+).+?class.+?\"\>([^\<]+)").findall(search)
+	#print(googlere)
 	return googlere
 	#f = OpenURL("results")
 #----------------------------------------------
@@ -158,7 +167,7 @@ def Results(q):
 	#ST(search)
 	results = re.compile("\/track\/([^\/]+)\/([^\"]+).+?song-artist\"\>([^\<]+)").findall(search)
 	results2 = re.compile("\/track\/([^\/]+)\/([^\"]+).+?\"([^\"]+).+?song-artist\"\>([^\<]+)").findall(search)
-	ST(search)
+	#ST(search)
 	fim = '<style>'
 	fim+=".imageholder{position: relative; float: left;}"
 	fim+=".caption{ position: absolute; top: 50%; mix-blend-mode: difference;color: rgb(0, 255, 255);font-family: verdana; font-size: 28px}"
@@ -192,14 +201,18 @@ if results:
 
 if not results:
 	resultsG = Google(fileq)
-	#ST(resultsG)
 
 if resultsG:
 	print("GOOGLE")
 	#newsearch = re.sub(' ?\- ?.+', '', resultsG[0][1], flags=re.IGNORECASE)
 	newsearch = re.sub(' song by', '', resultsG[0][1], flags=re.IGNORECASE)
+	newsearch = re.sub(' single by', '', resultsG[0][1], flags=re.IGNORECASE)
 	newsearch = re.sub(' ?\| Spotify', '', newsearch, flags=re.IGNORECASE)
 	newsearch = re.sub(', .+', '', newsearch, flags=re.IGNORECASE)
+	newsearch = re.sub('\(.+?\)', '', newsearch, flags=re.IGNORECASE)
+	newsearch = re.sub('  ', ' ', newsearch, flags=re.IGNORECASE)
+	#print(newsearch)
+	#print(newsearch)
 	#print(newsearch)
 	results = Results(newsearch)
 	if results:
@@ -249,11 +262,16 @@ trackid = newresults[int(choice)-1][1]
 track = OpenURL("https://musicstax.com/track/worst-nites/{0}".format(trackid)).replace("\r","").replace("\n","")
 trackname = re.compile("artist\: \"([^\"]+).+?song\: \"([^\"]+)").findall(track)
 year = re.compile("eventAction\: \'ReleaseYear\'\,.+?eventlabel\: \'([^\']+)", re.IGNORECASE).findall(track)
-#ST(year)
+#ST(track)
 image = re.compile("background: url\('([^\']+)").findall(track)
+ctracknum = re.compile("data-cy\=\"meta-Track\+Number-value\">(\d+)").findall(track)
+#ST(ctracknum)
 imagetrack = ""
+tracknum = ""
 if image:
-	imagetrack=image[0]
+	imagetrack = image[0]
+if ctracknum:
+	tracknum = ctracknum[0]
 keybpm = re.compile("eventAction\: \'BPM\',.+?eventLabel.+?(\d+).+?eventLabel\: \'([^\']+)").findall(track)
 #ST(keybpm)
 if trackname and keybpm:
@@ -276,7 +294,7 @@ if trackname and keybpm:
 	print ("{0}.{1}".format(Filename,extension))
 	newname = "{0}.{1}".format(remove_accents(Filename),extension)
 	#try:
-	changetag(fullpath,cartist,csong,cbpm,ckeys,imagetrack,cyear,newname)
+	changetag(fullpath,cartist,csong,cbpm,ckeys,imagetrack,cyear,newname,tracknum)
 	#except:
 		#pass
 	os.rename(fullpath, newname)
@@ -286,7 +304,6 @@ if trackname and keybpm:
 		pass
 #file,artist,song,album
 #print (url)
-
 
 
 
