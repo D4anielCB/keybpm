@@ -122,7 +122,10 @@ def OpenURL(url):
 	return final'''
 #----------------------------------------------
 def Google(key):
-	key=key.replace(".mp3","")+" spotify"
+	key = key.replace(".mp3","")+" spotify"
+	key = re.sub('(instrumental|inst|acc?apell?a)', '', key, flags=re.IGNORECASE)
+	key = re.sub('  ', ' ', key, flags=re.IGNORECASE)
+	print(key)
 	#print(quote_plus(key))
 	search =  OpenURL("https://www.google.com/search?q={0}".format(quote_plus(key)))
 	googlere = re.compile("https:\/\/open.spotify.com.+?\/([^\&]+).+?class.+?\"\>([^\<]+)").findall(search)
@@ -206,11 +209,12 @@ if resultsG:
 	print("GOOGLE")
 	#newsearch = re.sub(' ?\- ?.+', '', resultsG[0][1], flags=re.IGNORECASE)
 	newsearch = re.sub(' song by', '', resultsG[0][1], flags=re.IGNORECASE)
-	newsearch = re.sub(' single by', '', resultsG[0][1], flags=re.IGNORECASE)
+	newsearch = re.sub(' single by', '', newsearch, flags=re.IGNORECASE)
 	newsearch = re.sub(' ?\| Spotify', '', newsearch, flags=re.IGNORECASE)
 	newsearch = re.sub(', .+', '', newsearch, flags=re.IGNORECASE)
 	newsearch = re.sub('\(.+?\)', '', newsearch, flags=re.IGNORECASE)
 	newsearch = re.sub('  ', ' ', newsearch, flags=re.IGNORECASE)
+	newsearch = re.sub('\.{1,3}', ' ', newsearch, flags=re.IGNORECASE)
 	#print(newsearch)
 	#print(newsearch)
 	#print(newsearch)
