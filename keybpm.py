@@ -31,6 +31,7 @@ if re.compile("remixe?s?", re.IGNORECASE).findall(file):
 Keys = {"C Major": "C", "C# Major": "C#", "D Major": "D"}
 Filename = "$artist - $song $type $key $bpm" # structure of the name of the file to be renamed
 MaxBPM = 140 # set the value max o a bpm
+AskSpotify = False
 #print(Keys["D Major"])
 
 
@@ -40,13 +41,19 @@ def getimgtrack(url):
 	#requests.get(url)
 	r = requests.get(url)
 	return r.content
-def changetag(file,artist,song,album,genre,imagetrack,year,filename,tracknum):
+def changetag(file,artist,song,album,genre,imagetrack,year,filename,tracknum,trackid):
 	if imagetrack:
 		imagetrack = getimgtrack(imagetrack)
 		#ST(imagetrack)
 	#try:
-	#ST(file)
 	audiofile = eyed3.load(file).tag
+	#audiofile.publisher = "Rick Mashups"
+	audiofile.encoded_by = "Rick Mashups"
+	#audiofile.composer = "Rick Mashups"
+	#audiofile.conductors = "Rick Mashups"
+	audiofile.artist_url = trackid
+	#ST(audiofile.unique_file_ids)
+	#ST(audiofile.album_artist)
 	artist = re.sub(' \,.+', '', artist, flags=re.IGNORECASE)
 	if tracknum:
 		audiofile.track_num = int(tracknum)
@@ -55,8 +62,10 @@ def changetag(file,artist,song,album,genre,imagetrack,year,filename,tracknum):
 	audiofile.artist = artist
 	audiofile.album = album
 	audiofile.recording_date = year
-	if filename != fileold:
+	if not re.compile("\.mp3$").findall(str(audiofile.album_artist)):
 		audiofile.album_artist = fileold
+	#if filename != fileold:
+		#audiofile.album_artist = fileold
 	if imagetrack:
 		#fileimg = open("as345trfgsdf345345.jfif", 'rb').read()
 		#ST(imagetrack)
@@ -73,6 +82,12 @@ def changetag(file,artist,song,album,genre,imagetrack,year,filename,tracknum):
 	#	pass
 	#except:
 		#pass
+def RetTag(file):
+	audiofile = eyed3.load(file).tag
+	if audiofile.artist_url:
+		return audiofile.artist_url
+	else:
+		return ""
 #----------------------------------------------
 def remove_accents(s):
     filename = "".join(i for i in s if i not in "\/:*?<>|")
@@ -105,10 +120,10 @@ def html(x="", o="w"):
 		pass
 
 def OpenURL(url):
-	r = requests.get(url = url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100110 Firefox/11.0'})
+	#r = requests.get(url = url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100110 Firefox/11.0'})
 	#ST(r.text)
-	return r.text
-	'''req = Request(url)
+	#return r.text
+	req = Request(url)
 	headers = {}
 	headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100110 Firefox/11.0'
 	for k, v in headers.items():
@@ -119,7 +134,7 @@ def OpenURL(url):
 	except:
 		final = str(urlopen(req).read()).replace('\r', '')
 	#ST(final)
-	return final'''
+	return final
 #----------------------------------------------
 def Google(key):
 	key = key.replace(".mp3","")+" spotify"
@@ -151,7 +166,52 @@ def bpm(value):
 	else:
 		value = str(value)
 	return value.replace(".0","")
-#----------------------------------------------
+def DoChanges(trackid):
+	global Filename
+	track = OpenURL("https://musicstax.com/track/worst-nites/{0}".format(trackid)).replace("\r","").replace("\n","")
+	trackname = re.compile("artist\: \"([^\"]+).+?song\: \"([^\"]+)").findall(track)
+	year = re.compile("eventAction\: \'ReleaseYear\'\,.+?eventlabel\: \'([^\']+)", re.IGNORECASE).findall(track)
+	#ST(track)
+	image = re.compile("background: url\('([^\']+)").findall(track)
+	ctracknum = re.compile("data-cy\=\"meta-Track\+Number-value\">(\d+)").findall(track)
+	#ST(ctracknum)
+	imagetrack = ""
+	tracknum = ""
+	if image:
+		imagetrack = image[0]
+	if ctracknum:
+		tracknum = ctracknum[0]
+	keybpm = re.compile("eventAction\: \'BPM\',.+?eventLabel.+?(\d+).+?eventLabel\: \'([^\']+)").findall(track)
+	#ST(trackname)
+	if trackname and keybpm:
+		ckeys=keys(keybpm[0][1])
+		cbpm=bpm(keybpm[0][0])
+		cartist = re.sub(' ?\,.+', '', trackname[0][0], flags=re.IGNORECASE)
+		csong = trackname[0][1]
+		cyear= ""
+		if year:
+			cyear=year[0]
+		#filename = "{0} - {1} (Inst) {3}".format(trackname[0][0], trackname[0][1], keybpm[0][0], keys(keybpm[0][1]))
+		#"$artist - $song ($type) $key $bpm" 
+		Filename = re.sub("\$artist", cartist, Filename, flags=re.IGNORECASE)
+		Filename = re.sub("\$song", csong, Filename, flags=re.IGNORECASE)
+		Filename = re.sub("\$key", ckeys, Filename, flags=re.IGNORECASE)
+		Filename = re.sub("\$bpm", cbpm, Filename, flags=re.IGNORECASE)
+		Filename = re.sub("\$type", steam, Filename, flags=re.IGNORECASE)
+		Filename = re.sub("  ", " ", Filename, flags=re.IGNORECASE)
+		#Filename
+		print ("{0}.{1}".format(Filename,extension))
+		newname = "{0}.{1}".format(remove_accents(Filename),extension)
+		#try:
+		changetag(fullpath,cartist,csong,cbpm,ckeys,imagetrack,cyear,newname,tracknum,trackid)
+		#except:
+			#pass
+		os.rename(fullpath, newname)
+		#try:
+		#	os.remove("_keybpm_.html")
+		#except:
+		#	pass
+#--------------------------------------------------------------------------------
 #file = "Foster the People - Worst Nites (Instrumental)"
 fileq = re.sub('\(.+', '', file, flags=re.IGNORECASE) # variable to serach for the song
 fileq = re.sub('^\d+( |\.|\-)', '', fileq, flags=re.IGNORECASE) # variable to serach for the song
@@ -164,6 +224,7 @@ elif acapella:
 	steam="(Acap)"
 else:
 	steam=""
+	
 # ==========================
 def Results(q):
 	search = OpenURL("https://musicstax.com/search?q={0}".format(quote_plus(q))).replace("\r","").replace("\n","")
@@ -189,6 +250,15 @@ def Results(q):
 		html(fim)
 	return results
 # ==========================
+retag = ""
+if AskSpotify:
+	retag = RetTag(fullpath)
+if re.compile("^[a-zA-Z0-9]{20,24}").findall(retag) and AskSpotify:
+	#print(re.compile("^[a-zA-Z0-9]{20,24}").findall(retag))
+	DoChanges(retag)
+	sys.exit()
+
+
 results = Results(fileq)
 #results = False
 resultsG = False
@@ -261,54 +331,12 @@ while re.compile("\D+").findall(choice):
 	choice = input('Type your choice or type the name of the song if not found: ')
 #os.system('cls||clear')
 
-	
-trackid = newresults[int(choice)-1][1]
-track = OpenURL("https://musicstax.com/track/worst-nites/{0}".format(trackid)).replace("\r","").replace("\n","")
-trackname = re.compile("artist\: \"([^\"]+).+?song\: \"([^\"]+)").findall(track)
-year = re.compile("eventAction\: \'ReleaseYear\'\,.+?eventlabel\: \'([^\']+)", re.IGNORECASE).findall(track)
-#ST(track)
-image = re.compile("background: url\('([^\']+)").findall(track)
-ctracknum = re.compile("data-cy\=\"meta-Track\+Number-value\">(\d+)").findall(track)
-#ST(ctracknum)
-imagetrack = ""
-tracknum = ""
-if image:
-	imagetrack = image[0]
-if ctracknum:
-	tracknum = ctracknum[0]
-keybpm = re.compile("eventAction\: \'BPM\',.+?eventLabel.+?(\d+).+?eventLabel\: \'([^\']+)").findall(track)
-#ST(keybpm)
-if trackname and keybpm:
-	ckeys=keys(keybpm[0][1])
-	cbpm=bpm(keybpm[0][0])
-	cartist = re.sub(' ?\,.+', '', trackname[0][0], flags=re.IGNORECASE)
-	csong = trackname[0][1]
-	cyear= ""
-	if year:
-		cyear=year[0]
-	#filename = "{0} - {1} (Inst) {3}".format(trackname[0][0], trackname[0][1], keybpm[0][0], keys(keybpm[0][1]))
-	#"$artist - $song ($type) $key $bpm" 
-	Filename = re.sub("\$artist", cartist, Filename, flags=re.IGNORECASE)
-	Filename = re.sub("\$song", csong, Filename, flags=re.IGNORECASE)
-	Filename = re.sub("\$key", ckeys, Filename, flags=re.IGNORECASE)
-	Filename = re.sub("\$bpm", cbpm, Filename, flags=re.IGNORECASE)
-	Filename = re.sub("\$type", steam, Filename, flags=re.IGNORECASE)
-	Filename = re.sub("  ", " ", Filename, flags=re.IGNORECASE)
-	#Filename
-	print ("{0}.{1}".format(Filename,extension))
-	newname = "{0}.{1}".format(remove_accents(Filename),extension)
-	#try:
-	changetag(fullpath,cartist,csong,cbpm,ckeys,imagetrack,cyear,newname,tracknum)
-	#except:
-		#pass
-	os.rename(fullpath, newname)
-	try:
-		os.remove("_keybpm_.html")
-	except:
-		pass
+
+			
+trackid = newresults[int(choice)-1][1]	
+DoChanges(trackid)
 #file,artist,song,album
 #print (url)
-
 
 
 
