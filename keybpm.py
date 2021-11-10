@@ -206,7 +206,18 @@ def DoChanges(trackid):
 		changetag(fullpath,cartist,csong,cbpm,ckeys,imagetrack,cyear,newname,tracknum,trackid)
 		#except:
 			#pass
-		os.rename(fullpath, newname)
+		i=2
+		keeprename = True
+		try:
+			os.rename(fullpath, newname)
+		except:
+			while keeprename == True or i < 10:
+				try:
+					newname = "{0} [{2}].{1}".format(remove_accents(Filename),extension,str(i))
+					os.rename(fullpath, newname)
+					keeprename = False
+				except:
+					i+=1
 		#try:
 		#	os.remove("_keybpm_.html")
 		#except:
@@ -223,7 +234,7 @@ if instrumental:
 elif acapella:
 	steam="(Acap)"
 else:
-	steam=""
+	steam="(Song)"
 	
 # ==========================
 def Results(q):
