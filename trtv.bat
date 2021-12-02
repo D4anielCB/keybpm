@@ -1,2 +1,0 @@
-py trtv.py
-pause
